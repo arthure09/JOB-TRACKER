@@ -12,6 +12,27 @@ dist
 dist-ssr
 *.local
 
+# Rahasia. Vite membocorkan SEMUA variabel berawalan VITE_ ke bundel browser,
+# jadi file ini tidak pernah boleh masuk repo.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+.netrc
+secrets.json
+service-account*.json
+
+# Kredensial & cache platform deploy
+.vercel
+.netlify
+.firebase
+.wrangler
+.env.vercel
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

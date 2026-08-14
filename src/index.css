@@ -1,12 +1,1050 @@
-/* File: src/index.css */
-body, html {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  background-color: #0a0a0a; /* Warna hitam yang sama dengan aplikasi */
+/* Job Tracker.
+   One rule governs the whole palette: gold means OFFER, and nothing else.
+   Ground and stages are neutral greys precisely so the gold has no competition
+   — any warmth in the surface dulls the one colour that carries meaning. The
+   grey ramp is not eyeballed: each step clears 3:1 against its own surface and
+   1.5:1 against its neighbour. Re-run the check before nudging any of them. */
+
+:root {
+  color-scheme: light;
+  --bg: #fafafa;
+  --bg-sunk: #f2f2f2;
+  --bg-hover: #ebebeb;
+  --bg-input: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #5c5c5c;
+  --text-faint: #666666;
+  --border: #e4e4e4;
+  --border-strong: #cccccc;
+  --accent: #8a5a06;
+  --accent-fg: #1a1a1a;
+  --gold: #d9a20c; /* fill only — pairs with --accent-fg, never carries small text */
+  --danger: #a63a22;
+  --shadow: 0 18px 44px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --radius: 4px;
+
+  --Wishlist-bg: #ededed;
+  --Wishlist-fg: #4f4f4f;
+  --Applied-bg: #e4e4e4;
+  --Applied-fg: #414141;
+  --Interview-bg: #d9d9d9;
+  --Interview-fg: #333333;
+  --Offer-bg: #f7e2a8;
+  --Offer-fg: #6b4a04;
+  --Rejected-bg: #f4dcd6;
+  --Rejected-fg: #8c3018;
+
+  --Wishlist-mark: #8f8f8f;
+  --Applied-mark: #6b6b6b;
+  --Interview-mark: #404040;
+  --Offer-mark: #a87608;
+  --Rejected-mark: #a63a22;
 }
 
-#root {
+/* Neutral black, deliberately: with the surface and the stage ramp drained of
+   hue, the gold is the only warm thing on the screen and reads as the event it
+   marks. A warm-tinted ground competed with it. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --bg-sunk: #141414;
+  --bg-hover: #1e1e1e;
+  --bg-input: #141414;
+  --text: #ececea;
+  --text-muted: #9d9d9a;
+  --text-faint: #868683;
+  --border: #262626;
+  --border-strong: #383838;
+  --accent: #f5c518;
+  --accent-fg: #0d0d0d;
+  --gold: #f5c518;
+  --danger: #e8896b;
+  --shadow: 0 18px 44px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+  --Wishlist-bg: #1f1f1f;
+  --Wishlist-fg: #adadaa;
+  --Applied-bg: #252525;
+  --Applied-fg: #c0c0bd;
+  --Interview-bg: #2c2c2c;
+  --Interview-fg: #d6d6d3;
+  --Offer-bg: #3d2f08;
+  --Offer-fg: #f5c518;
+  --Rejected-bg: #331f1a;
+  --Rejected-fg: #e8896b;
+
+  /* Re-validated against #0d0d0d. Greys, not warm clays — see the note above. */
+  --Wishlist-mark: #616160;
+  --Applied-mark: #7d7d7a;
+  --Interview-mark: #a3a39f;
+  --Offer-mark: #f5c518;
+  --Rejected-mark: #c4593f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Three voices: display carries the personality, body stays out of the way,
+   mono is reserved for figures so every column of numbers lines up. */
+:root {
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-body: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.page {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 40px 24px 96px;
+}
+
+/* ---------- sign-in gate ---------- */
+
+/* Also rendered empty while the session is being checked, so the page paints
+   its own background instead of flashing white before React decides. */
+.gate {
   min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.gate h1 {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 7vw, 56px);
+  font-weight: 700;
+  font-variation-settings: 'opsz' 48;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  margin: 0 0 14px;
+}
+
+.gate-note {
+  max-width: 34ch;
+  margin: 0 auto 24px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.gate form {
+  display: grid;
+  gap: 10px;
+  width: min(320px, 100%);
+}
+
+/* The gate centres its heading; typed text still reads better from the left. */
+.gate .field {
+  text-align: left;
+}
+
+/* Reveal button sits inside the field; the padding keeps a long password from
+   running underneath it. */
+.pw {
+  position: relative;
+  display: grid;
+}
+
+.pw .field {
+  padding-right: 40px;
+}
+
+.pw .btn {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  padding: 5px 6px;
+}
+
+.gate .error {
+  margin-top: 14px;
+}
+
+/* ---------- loading ---------- */
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: spin 0.7s linear infinite;
+}
+
+/* The delay is the point: a session check that finishes in 80ms should show
+   nothing at all, rather than flashing a spinner the eye reads as jank. */
+.spinner-lg {
+  width: 26px;
+  height: 26px;
+  border-width: 2.5px;
+  color: var(--accent);
+  animation: spin 0.7s linear infinite, appear 0.2s ease 0.3s both;
+}
+
+/* The global prefers-reduced-motion rule above already flattens this. */
+.page {
+  animation: rise 0.35s ease both;
+}
+
+/* ---------- header ---------- */
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+/* The eyebrow names the activity; the h1 names the tool. Two different jobs, so
+   two different faces. */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 6px;
+}
+
+.head h1 {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 7vw, 56px);
+  font-weight: 700;
+  font-variation-settings: 'opsz' 48;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  margin: 0;
+}
+
+.head p {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.head-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Gold's second and last appearance: the one action that starts everything. */
+.btn-primary {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--accent-fg);
+  font-weight: 600;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* Icons inherit the button's text colour and optical weight. */
+.btn svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 6px 8px;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.btn-ghost.danger:hover {
+  color: var(--danger);
+}
+
+/* ---------- dashboard: the funnel is the whole story ---------- */
+
+.dash {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: 28px;
+  align-items: start;
+  margin-bottom: 40px;
+  padding-top: 26px;
+  border-top: 1px solid var(--border);
+}
+
+.panel-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 18px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.panel-title button {
+  margin-left: auto;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* --- the funnel --- */
+
+.funnel {
+  display: grid;
+}
+
+/* A stage is a button: the chart IS the status filter, no separate control. */
+.stage {
+  display: block;
+  width: 100%;
+  padding: 5px 8px 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+
+.stage:hover {
+  background: var(--bg-hover);
+}
+
+.stage[aria-pressed='true'] {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.stage-label {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+/* --room is the width the count needs; bars are scaled into what's left, so a
+   100% bar still has its number beside it and every bar stays proportional. */
+.stage-track {
+  --room: 46px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* The bar tapers to its share of the total, so the narrowing itself is the
+   message. min-width keeps a lone survivor visible instead of a hairline. */
+.stage-bar {
+  display: block;
+  height: 22px;
+  width: calc((100% - var(--room)) * var(--pct) / 100);
+  min-width: 3px;
+  flex: none;
+  background: var(--mark);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.stage-count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+/* Offer is the only gold thing on the page. */
+.stage.is-offer .stage-count {
+  color: var(--Offer-mark);
+  font-size: 20px;
+}
+
+/* The gap between stages carries the attrition — the number you actually
+   want, sitting exactly where the loss happens. */
+.drop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 8px 4px 9px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.drop::before {
+  content: '';
+  width: 1px;
+  height: 14px;
+  background: var(--border-strong);
+  flex: none;
+}
+
+.drop b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Rejected is not a stage — it is the exit. Ruled off, never in the taper. */
+.stage.exit {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.exit .stage-bar {
+  height: 14px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--Rejected-mark) 0 2px,
+    transparent 2px 5px
+  );
+}
+
+/* --- right rail --- */
+
+/* A rule between every stat, and one separating the rail from the funnel, so
+   each figure is read as its own thing rather than as a continuous column. */
+.rail {
+  display: grid;
+  padding-left: 28px;
+  border-left: 1px solid var(--border);
+}
+
+.rail > * + * {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.rate {
+  display: grid;
+  gap: 2px;
+}
+
+.rate-value {
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 600;
+  font-variation-settings: 'opsz' 40;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rate-value small {
+  font-size: 20px;
+  color: var(--text-faint);
+  margin-left: 2px;
+}
+
+.rate-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.rate-note {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* --- 6-month sparkline --- */
+
+.plot {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+  height: 62px;
+  align-items: end;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+
+.col-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* A month with applications always shows a stub, so 1 never reads as 0. */
+.col-bar {
+  width: 100%;
+  max-width: 26px;
+  flex: none;
+  background: var(--Applied-mark);
+  border-radius: 1px;
+}
+
+.col-bar.is-empty {
+  height: 1px;
+  background: var(--border-strong);
+}
+
+.axis {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+  margin-top: 7px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* ---------- toolbar ---------- */
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.toolbar[hidden] {
+  display: none;
+}
+
+.search {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search svg {
+  position: absolute;
+  left: 11px;
+  width: 15px;
+  height: 15px;
+  stroke: var(--text-faint);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  fill: none;
+  pointer-events: none;
+}
+
+.field,
+.search input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  font-size: 14px;
+  transition: border-color 0.12s ease;
+}
+
+.search input {
+  padding-left: 34px;
+}
+
+.field:focus,
+.search input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.field::placeholder,
+.search input::placeholder {
+  color: var(--text-faint);
+}
+
+select.field,
+.toolbar select {
+  cursor: pointer;
+}
+
+.toolbar select {
+  width: auto;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-input);
+  font-size: 14px;
+}
+
+/* ---------- table ---------- */
+
+.table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th {
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-sunk);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.cell-title {
+  font-weight: 600;
+}
+
+.cell-title small {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+.muted {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Deliberately not gold: gold is reserved for Offer and the primary action, so
+   links earn their affordance from the underline instead of the accent. */
+.link {
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+}
+
+.link:hover {
+  color: var(--text);
+  text-decoration-color: currentColor;
+}
+
+.row-actions {
+  display: flex;
+  gap: 2px;
+  justify-content: flex-end;
+}
+
+/* Status pill doubling as an inline editor — one click to change status. */
+.pill {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  padding: 4px 26px 4px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: var(--pill-bg);
+  color: var(--pill-fg);
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 13px center, right 8px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.pill:hover {
+  filter: brightness(0.96);
+}
+
+.pill option {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ---------- empty state ---------- */
+
+.empty {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--text-muted);
+}
+
+.empty h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 24px;
+}
+
+.empty p {
+  margin: 0 0 20px;
+  font-size: 14px;
+}
+
+/* ---------- dialog (native: ESC + backdrop for free) ---------- */
+
+dialog {
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  width: min(520px, calc(100vw - 32px));
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.dialog-head {
+  display: flex;
+  align-items: flex-start;
+  padding: 20px 22px 0;
+}
+
+.dialog-head h2 {
+  font-family: var(--font-display);
+  margin: 0;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.dialog-head p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+form {
+  padding: 18px 22px 22px;
+  display: grid;
+  gap: 14px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+textarea.field {
+  resize: vertical;
+  min-height: 68px;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 0;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+/* ---------- mobile: rows become cards ---------- */
+
+@media (max-width: 720px) {
+  .page {
+    padding: 24px 14px 72px;
+  }
+
+  /* The funnel needs full width to taper legibly; the rail drops beneath it. */
+  .dash {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  /* Stacked, so the rules between stats stay horizontal and keep meaning. */
+  .rail {
+    padding-left: 0;
+    padding-top: 24px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+
+  thead {
+    display: none;
+  }
+
+  .table-wrap,
+  table,
+  tbody,
+  tr,
+  td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-wrap {
+    border: none;
+    background: transparent;
+  }
+
+  tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    margin-bottom: 10px;
+    padding: 6px 4px;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  td {
+    border-bottom: none;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 12.5px;
+  }
+
+  td.cell-title {
+    display: block;
+    padding-top: 10px;
+    font-size: 15px;
+  }
+
+  td.cell-title::before {
+    content: none;
+  }
+
+  .row-actions {
+    width: 100%;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- print (the PDF export) ---------- */
+
+/* Browsers drop background colours when printing but keep text colours, so a
+   dark-theme export would print pale grey on white — invisible. Only the tokens
+   that reach ink are restated; the rest never leave a mark on paper. */
+@media print {
+  :root,
+  :root[data-theme='dark'] {
+    --bg: #ffffff;
+    --bg-sunk: #ffffff;
+    --bg-hover: #ffffff;
+    --bg-input: #ffffff;
+    --text: #000000;
+    --text-muted: #444444;
+    --text-faint: #555555;
+    --border: #bbbbbb;
+    --border-strong: #999999;
+    --accent: #000000;
+    --Wishlist-fg: #333333;
+    --Applied-fg: #333333;
+    --Interview-fg: #333333;
+    --Offer-fg: #6b4a04;
+    --Rejected-fg: #8c3018;
+  }
+
+  @page {
+    margin: 14mm;
+  }
+
+  /* Everything that only makes sense with a mouse. The funnel and the chart go
+     too: both say what they mean with colour, and colour is what the printer
+     throws away. The header line keeps the same counts in words. */
+  .head-actions,
+  .toolbar,
+  .dash,
+  .row-actions,
+  dialog {
+    display: none;
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+    animation: none;
+  }
+
+  table {
+    font-size: 11px;
+  }
+
+  /* Repeat the header on every page and never split a job across two. */
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* The dropdown is a control on screen and a word on paper. */
+  .pill {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* "Buka ↗" is useless on paper; the address is the part worth keeping.
+     font-size:0 hides the label without hiding its ::after. */
+  .link {
+    font-size: 0;
+  }
+
+  .link::after {
+    content: attr(href);
+    font-size: 9px;
+    word-break: break-all;
+  }
 }
