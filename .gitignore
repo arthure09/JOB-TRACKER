@@ -26,6 +26,12 @@ dist-ssr
 secrets.json
 service-account*.json
 
+# Dump database: berisi data pribadi, hash kata sandi, dan token sesi.
+*.backup
+*.backup.gz
+*.dump
+*.sql.gz
+
 # Kredensial & cache platform deploy
 .vercel
 .netlify

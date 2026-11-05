@@ -27,6 +27,8 @@
   --Wishlist-fg: #4f4f4f;
   --Applied-bg: #e4e4e4;
   --Applied-fg: #414141;
+  --Assessment-bg: #dedede;
+  --Assessment-fg: #3a3a3a;
   --Interview-bg: #d9d9d9;
   --Interview-fg: #333333;
   --Offer-bg: #f7e2a8;
@@ -65,6 +67,8 @@
   --Wishlist-fg: #adadaa;
   --Applied-bg: #252525;
   --Applied-fg: #c0c0bd;
+  --Assessment-bg: #282828;
+  --Assessment-fg: #cbcbc8;
   --Interview-bg: #2c2c2c;
   --Interview-fg: #d6d6d3;
   --Offer-bg: #3d2f08;
@@ -483,7 +487,9 @@ textarea {
   color: var(--text-muted);
 }
 
-/* Rejected is not a stage — it is the exit. Ruled off, never in the taper. */
+/* Rejected is not a stage — it is the exit. Ruled off, never in the taper.
+   Assessment sits outside it too, because not every job goes through one. */
+.stage.aside,
 .stage.exit {
   margin-top: 14px;
   padding-top: 14px;
@@ -513,6 +519,15 @@ textarea {
   margin-top: 20px;
   padding-top: 20px;
   border-top: 1px solid var(--border);
+}
+
+.period {
+  display: grid;
+  gap: 2px;
+}
+
+.period .rate-note {
+  margin: 6px 0 0;
 }
 
 .rate {
@@ -598,6 +613,66 @@ textarea {
   letter-spacing: 0.04em;
   color: var(--text-faint);
   text-align: center;
+}
+
+/* ---------- follow-ups ---------- */
+
+.follow-ups {
+  margin-bottom: 28px;
+  padding-top: 26px;
+  border-top: 1px solid var(--border);
+}
+
+.follow-ups ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.follow-ups li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.follow-job {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Red, not gold: being late is a warning, and gold is reserved for Offer. */
+.follow-late {
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
+.follow-today {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.load-error {
+  display: grid;
+  gap: 14px;
+  max-width: 420px;
+}
+
+.load-error h1 {
+  font-size: clamp(26px, 5vw, 34px);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.load-error .gate-note {
+  margin-bottom: 0;
+}
+
+.load-error .dialog-actions {
+  justify-content: center;
 }
 
 /* ---------- toolbar ---------- */
@@ -733,6 +808,17 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
+.muted small,
+.status-cell small {
+  display: block;
+  font-size: 12px;
+}
+
+.status-cell small {
+  color: var(--text-muted);
+  margin: 2px 0 0 12px;
+}
+
 /* Deliberately not gold: gold is reserved for Offer and the primary action, so
    links earn their affordance from the underline instead of the accent. */
 .link {
@@ -864,6 +950,14 @@ textarea.field {
   min-height: 68px;
 }
 
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+}
+
 .error {
   color: var(--danger);
   font-size: 13px;
@@ -982,6 +1076,7 @@ textarea.field {
     --accent: #000000;
     --Wishlist-fg: #333333;
     --Applied-fg: #333333;
+    --Assessment-fg: #333333;
     --Interview-fg: #333333;
     --Offer-fg: #6b4a04;
     --Rejected-fg: #8c3018;
@@ -996,6 +1091,7 @@ textarea.field {
      throws away. The header line keeps the same counts in words. */
   .head-actions,
   .toolbar,
+  .follow-ups,
   .dash,
   .row-actions,
   dialog {

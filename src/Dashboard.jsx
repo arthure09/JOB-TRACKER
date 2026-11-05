@@ -1,5 +1,5 @@
-import { Fragment } from 'react';
-import { funnel, monthlyCounts, summary } from './jobs';
+import { Fragment, useState } from 'react';
+import { changeText, funnel, monthlyCounts, progress } from './jobs';
 
 // The clay ramp deepens stage by stage, then Offer breaks it with the only gold
 // on the page. Index-aligned with funnel().stages.
@@ -26,13 +26,13 @@ function Stage({ label, pct, count, mark, pressed, onClick, className = '' }) {
   );
 }
 
-function Rate({ label, value, detail }) {
+function Rate({ label, value, detail, unit = '%' }) {
   return (
     <div className="rate">
       <span className="rate-label">{label}</span>
       <span className="rate-value">
         {value ?? 0}
-        <small>%</small>
+        {unit && <small>{unit}</small>}
       </span>
       <span className="rate-note">{detail}</span>
     </div>
@@ -66,16 +66,24 @@ function Months({ months }) {
   );
 }
 
-// Always summarises the whole dataset. The toolbar below scopes only the table,
-// so the two never disagree about what they show.
+// The funnel always summarises the whole dataset, so a bar's number can only ever
+// match the rows it filters to. The period picker scopes the numbers on the right.
 export default function Dashboard({ jobs, status, onStatus }) {
-  const stats = summary(jobs);
+  const [period, setPeriod] = useState('all');
+  const monthly = period !== 'all';
+  const stats = progress(jobs, monthly ? period : null);
+  const months = monthlyCounts(jobs);
   const pipe = funnel(jobs);
   const toggle = (key) => onStatus(status === key ? 'All' : key);
-  const rateDetail = (n) =>
+  const rateDetail = (n, change) =>
     stats.submitted === 0
       ? 'belum ada lamaran terkirim'
-      : `${n} dari ${stats.submitted} lamaran terkirim`;
+      : [
+          `${n} dari ${stats.submitted} lamaran terkirim`,
+          monthly && changeText(change, stats.prevLabel, ' poin'),
+        ]
+          .filter(Boolean)
+          .join(' · ');
 
   return (
     <section className="dash" aria-label="Ringkasan">
@@ -113,6 +121,17 @@ export default function Dashboard({ jobs, status, onStatus }) {
           ))}
         </div>
 
+        {/* Beside the taper, not in it: many jobs skip assessment entirely. */}
+        <Stage
+          className="aside"
+          label="Melewati assessment — jalur samping"
+          pct={pipe.assessmentPct}
+          count={pipe.assessment}
+          mark="Applied"
+          pressed={status === 'didAssessment'}
+          onClick={() => toggle('didAssessment')}
+        />
+
         <Stage
           className="exit"
           label="Ditolak — keluar jalur"
@@ -124,13 +143,53 @@ export default function Dashboard({ jobs, status, onStatus }) {
       </div>
 
       <div className="rail">
+        <div className="period">
+          <label htmlFor="period">Progres</label>
+          <select
+            id="period"
+            className="field"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+          >
+            <option value="all">Sepanjang waktu</option>
+            {[...months].reverse().map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label} {m.key.slice(0, 4)}
+              </option>
+            ))}
+          </select>
+          {monthly && (
+            <p className="rate-note">
+              Dihitung dari bulan lamaran dikirim, jadi bulan terbaru masih bisa naik.
+            </p>
+          )}
+        </div>
+        <Rate
+          label="Lamaran terkirim"
+          value={stats.submitted}
+          unit=""
+          detail={
+            monthly
+              ? changeText(stats.growth, stats.prevLabel)
+              : `bulan ini ${stats.thisMonth} · ${changeText(stats.growth, 'bulan lalu')}`
+          }
+        />
+        <Rate
+          label="Sampai assessment"
+          value={stats.assessmentRate}
+          detail={rateDetail(stats.assessment, stats.assessmentChange)}
+        />
         <Rate
           label="Sampai interview"
           value={stats.interviewRate}
-          detail={rateDetail(stats.interview)}
+          detail={rateDetail(stats.interview, stats.interviewChange)}
         />
-        <Rate label="Dapat offer" value={stats.offerRate} detail={rateDetail(stats.offer)} />
-        <Months months={monthlyCounts(jobs)} />
+        <Rate
+          label="Dapat offer"
+          value={stats.offerRate}
+          detail={rateDetail(stats.offer, stats.offerChange)}
+        />
+        <Months months={months} />
       </div>
     </section>
   );

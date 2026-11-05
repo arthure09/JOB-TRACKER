@@ -1,5 +1,5 @@
 import Icon from './Icon';
-import { SORTS, STATUSES, visibleJobs } from './jobs';
+import { SORTS, STATUSES, earlierReach, visibleJobs } from './jobs';
 
 const prettyDate = (iso) =>
   iso
@@ -33,33 +33,41 @@ function Empty({ hasJobs, onAdd, onReset }) {
 }
 
 function Row({ job, onEdit, onRemove, onStatus }) {
+  const earlier = earlierReach(job);
   return (
     <tr>
       <td className="cell-title">
         {job.jobTitle}
+        {job.cvVersion && <small>CV: {job.cvVersion}</small>}
         {job.notes && <small>{job.notes}</small>}
       </td>
       <td data-label="Perusahaan">{job.company}</td>
       <td data-label="Status">
-        <select
-          className="pill"
-          value={job.status}
-          onChange={(e) => onStatus(job.id, e.target.value)}
-          aria-label={`Status ${job.jobTitle}`}
-          style={{
-            '--pill-bg': `var(--${job.status}-bg)`,
-            '--pill-fg': `var(--${job.status}-fg)`,
-          }}
-        >
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <span className="status-cell">
+          <select
+            className="pill"
+            value={job.status}
+            onChange={(e) => onStatus(job.id, e.target.value)}
+            aria-label={`Status ${job.jobTitle}`}
+            style={{
+              '--pill-bg': `var(--${job.status}-bg)`,
+              '--pill-fg': `var(--${job.status}-fg)`,
+            }}
+          >
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          {earlier && <small>sempat {earlier}</small>}
+        </span>
       </td>
       <td className="muted" data-label="Tanggal">
-        {prettyDate(job.dateApplied)}
+        <span>
+          {prettyDate(job.dateApplied)}
+          {job.followUpDate && <small>Follow-up {prettyDate(job.followUpDate)}</small>}
+        </span>
       </td>
       <td data-label="Tautan">
         {job.jobUrl ? (
@@ -106,7 +114,7 @@ export default function JobTable({ jobs, filter, onFilter, onAdd, onEdit, onRemo
             type="search"
             value={filter.q}
             onChange={(e) => onFilter({ ...filter, q: e.target.value })}
-            placeholder="Cari posisi, perusahaan, atau catatan…"
+            placeholder="Cari posisi, perusahaan, CV, atau catatan…"
             aria-label="Cari lamaran"
           />
         </div>

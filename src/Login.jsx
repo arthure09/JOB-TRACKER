@@ -1,13 +1,7 @@
 import { useState } from 'react';
 import Icon from './Icon';
+import { loginEmail, loginError } from './jobs';
 import { supabase } from './supabase';
-
-// Supabase Auth has no username mode — an account is an email or a phone
-// number, nothing else. So the username is pinned to one domain that is never
-// shown or typed: the login screen asks for a name, Supabase gets an address.
-// ponytail: single fixed domain, no real mail behind it. Add an email field
-// only if a user ever needs to receive a password reset.
-const DOMAIN = '@jobtracker.local';
 
 export default function Login() {
   const [error, setError] = useState('');
@@ -20,14 +14,14 @@ export default function Login() {
     setError('');
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({
-      email: username.trim().toLowerCase() + DOMAIN,
+      email: loginEmail(username),
       password,
     });
     // Stay busy on success: the spinner keeps turning until App swaps this
     // screen for the tracker, so the wait reads as one motion, not two.
     if (error) {
       setBusy(false);
-      setError('Nama pengguna atau kata sandi salah.');
+      setError(loginError(error));
     }
   };
 
@@ -43,7 +37,7 @@ export default function Login() {
         <input
           className="field"
           name="username"
-          placeholder="Nama pengguna"
+          placeholder="Email atau nama pengguna"
           autoComplete="username"
           autoFocus
           required

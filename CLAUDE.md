@@ -23,10 +23,11 @@ Logika murni dipisah dari React supaya bisa dites tanpa DOM:
 | `src/jobs.js` | Semua logika: filter, urut, hitung, sanitasi, pemetaan kolom. **Tanpa React, tanpa DOM, tanpa jaringan.** |
 | `src/jobs.test.js` | Test untuk `jobs.js`, jalan di `node --test`. |
 | `src/App.jsx` | Gerbang sesi. Belum login → `Login`, sudah → `JobTracker`. |
-| `src/Login.jsx` | Form nama pengguna + kata sandi → `signInWithPassword()`. Nama pengguna ditambahi `@jobtracker.local` karena Supabase Auth hanya kenal email. Akun dibuat di dashboard Supabase, tidak pernah di kode. |
+| `src/Login.jsx` | Form email atau nama pengguna + kata sandi → `signInWithPassword()`. Nama tanpa `@` ditambahi `@jobtracker.local` oleh `loginEmail()` karena Supabase Auth hanya kenal email. Akun dibuat di dashboard Supabase, tidak pernah di kode. |
 | `src/supabase.js` | Client Supabase. Gagal keras kalau `.env` kosong. |
 | `src/theme.js` | Baca/pasang tema. Dijalankan saat impor, sebelum React menggambar. |
 | `src/JobTracker.jsx` | State + semua query Supabase + header. Merakit tiga komponen di bawah. |
+| `src/FollowUps.jsx` | Daftar follow-up yang jatuh tempo. Tidak tampil kalau kosong. |
 | `src/Dashboard.jsx` | Corong dan statistik. Menurunkan angkanya sendiri dari `jobs`. |
 | `src/JobTable.jsx` | Toolbar cari/urut, tabel, dan empty state. |
 | `src/JobDialog.jsx` | Form tambah/edit. State form-nya lokal, bukan milik parent. |
@@ -49,7 +50,9 @@ create table jobs (
   user_id uuid not null references auth.users on delete cascade,
   job_title text not null, company text not null,
   status text not null default 'Wishlist',
-  job_url text default '', date_applied date, notes text default '',
+  job_url text default '', date_applied date, follow_up_date date,
+  furthest_status text, cv_version text default '',
+  had_assessment boolean not null default false, notes text default '',
   created_at timestamptz default now()
 );
 alter table jobs enable row level security;
@@ -61,10 +64,21 @@ create policy "own rows only" on jobs
 
 **Corong itu jangkauan kumulatif, bukan status sekarang.** Lamaran yang sekarang
 "Offer" sudah lama meninggalkan "Applied", jadi hitungan status tidak bisa
-ditumpuk jadi corong. `STAGE_STATUSES` di `jobs.js` mendefinisikan tiap tahap
-sebagai himpunan status, dan **satu peta itu dipakai bersama** oleh bar corong dan
-filter tabel — supaya angka di bar selalu sama dengan jumlah baris saat diklik.
-Ada testnya; jangan pisahkan keduanya.
+ditumpuk jadi corong. `STAGE_REACH` di `jobs.js` mendefinisikan tiap tahap
+sebagai himpunan tahap terjauh (`reachOf()`), dan **satu peta itu dipakai bersama**
+oleh bar corong dan filter tabel — supaya angka di bar selalu sama dengan jumlah
+baris saat diklik. Ada testnya; jangan pisahkan keduanya. Corong selalu seluruh
+data; pemilih periode hanya berlaku untuk angka di panel kanan.
+
+Tahap terjauh tersimpan di `furthest_status`, jadi lamaran yang ditolak setelah
+interview tetap terhitung sampai interview. Status naik-turun lewat `withStatus()`
+supaya riwayat ini tidak hilang.
+
+Assessment sengaja di luar corong: banyak lamaran langsung ke interview, jadi
+tidak bisa bertumpuk di antara tahap. Ia tampil sebagai jalur samping, dan
+`didAssessment()` dipakai bersama oleh angka itu dan filter tabelnya. Tahap terjauh
+tidak bisa menjawabnya, karena Interview berperingkat lebih tinggi walau tanpa
+assessment; karena itu ada kolom `had_assessment`.
 
 Kunci tahap sengaja bukan nama status (`reachedApplied`, bukan `Applied`) karena
 keduanya menjawab pertanyaan berbeda.
@@ -102,7 +116,8 @@ dari tetangganya. Kalau menggeser satu warna, hitung ulang — jangan dikira-kir
 
 ## Batas yang sudah diketahui
 
-Job cuma menyimpan status sekarang, tanpa riwayat tahap. Akibatnya lamaran yang
-ditolak *setelah* interview tidak terhitung di tahap Interview, jadi angka
-"sampai interview" cenderung lebih rendah dari kenyataan. Perlu riwayat tahap
-kalau ini mulai penting.
+Job menyimpan tahap terjauh, tapi tidak kapan tahap itu dicapai. Akibatnya statistik
+per bulan dikelompokkan menurut tanggal lamaran dikirim, bukan tanggal interview, jadi
+bulan terbaru masih bisa naik. Baris Rejected yang dibuat sebelum `furthest_status` ada
+terhitung sampai Applied saja sampai dikoreksi lewat dialog edit. Perlu riwayat tahap
+bertanggal kalau waktu per tahap mulai penting.
